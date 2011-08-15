@@ -9,6 +9,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+/**
+ * 
+ *
+ */
 public class EClientSocket {
 
     // Client version history
@@ -166,6 +170,11 @@ public class EClientSocket {
     public EReader reader()             { return m_reader; }
 
 
+    /**
+     * Create an EClientSocket object.
+     * @param anyWrapper Typically an object that implements the EWrapper interface. This
+     * object will handle callbacks (including errors).
+     */
     public EClientSocket( AnyWrapper anyWrapper) {
         m_anyWrapper = anyWrapper;
     }
@@ -174,6 +183,13 @@ public class EClientSocket {
         return m_connected;
     }
     
+    /**
+     * Connect to the TWS process.
+     * @param host A string consisting of the IP address of the host. 
+     * 		Use "" to connect to the local host.
+     * @param port The port to connect to. Typically 7496.
+     * @param clientId
+     */
     public synchronized void eConnect( String host, int port, int clientId) {
         // already connected?
         host = checkConnected(host);

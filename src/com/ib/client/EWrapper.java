@@ -4,6 +4,10 @@
  */
 package com.ib.client;
 
+/**
+ * This interface describes the callbacks (including error handling) that occur after a 
+ * request is posted via EClientSocket.
+ */
 public interface EWrapper extends AnyWrapper {
 
     ///////////////////////////////////////////////////////////////////////
