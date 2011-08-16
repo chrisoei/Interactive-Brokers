@@ -184,9 +184,16 @@ public class EClientSocket {
     }
     
     /**
+     * Connect to TWS process on localhost using port 7496 and clientId 0.
+     */
+    public synchronized void eConnect() {
+    	eConnect(null, 7496, 0);
+    }
+    
+    /**
      * Connect to the TWS process.
      * @param host A string consisting of the IP address of the host. 
-     * 		Use "" to connect to the local host.
+     * 		Use null or "" to connect to the local host.
      * @param port The port to connect to. Typically 7496.
      * @param clientId
      */
