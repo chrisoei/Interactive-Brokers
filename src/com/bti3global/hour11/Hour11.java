@@ -1,3 +1,7 @@
+/*
+ * Created by Ben Towner
+ * Tools used for the collection of input market data for portfolio modeling. 
+ */
 package com.bti3global.hour11;
 
 import java.awt.Component;
@@ -26,7 +30,7 @@ public class Hour11 {
 
 static private void showMsg( Component parent, String str, int type) {    	
     // this function pops up a dlg box displaying a message
-    JOptionPane.showMessageDialog( parent, str, "Hour 11 Analytics - IB", type);
+    JOptionPane.showMessageDialog( parent, str, "Hour 11 - IB", type);
 }
 
 }

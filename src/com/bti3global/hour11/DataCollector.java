@@ -53,7 +53,7 @@ public class DataCollector extends JFrame implements EWrapper {
     private boolean m_disconnectInProgress = false;
     
     private OrderDlg      m_orderDlg = new OrderDlg(this);
-
+    
     public boolean  m_bIsFAAccount = false;
     
     DataCollector(){
