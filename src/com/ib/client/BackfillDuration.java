@@ -18,8 +18,8 @@ public class BackfillDuration {
     public static final int MIN5               = 13;
     public static final int MIN1               = 14;
     
-    public static String getField( int backfillDuration2) {
-        switch( backfillDuration2) {
+    public static String getField( int backfillDuration) {
+        switch( backfillDuration) {
             case ROLLANNUAL	: return "1 Y";
             case SEMIROLLANNUAL	: return "6 M";
             case ROLLQTR	: return "3 M";
