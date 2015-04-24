@@ -9,10 +9,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
-/**
- * 
- *
- */
 public class EClientSocket {
 
     // Client version history
@@ -75,9 +71,15 @@ public class EClientSocket {
 	// 45 = can receive notHeld field in openOrder
 	// 46 = can receive contractMonth, industry, category, subcategory fields in contractDetails
 	//    ; can receive timeZoneId, tradingHours, liquidHours fields in contractDetails
-    // 47 = can receive gamma, vega, theta, undPrice fields in TICK_OPTION_COMPUTATION
+	// 47 = can receive gamma, vega, theta, undPrice fields in TICK_OPTION_COMPUTATION
+	// 48 = can receive exemptCode in openOrder
+	// 49 = can receive hedgeType and hedgeParam in openOrder
+	// 50 = can receive optOutSmartRouting field in openOrder
+	// 51 = can receive smartComboRoutingParams in openOrder
+	// 52 = can receive deltaNeutralConId, deltaNeutralSettlingFirm, deltaNeutralClearingAccount and deltaNeutralClearingIntent in openOrder
+	// 53 = can receive orderRef in execution
 
-    private static final int CLIENT_VERSION = 47;
+    private static final int CLIENT_VERSION = 53;
     private static final int SERVER_VERSION = 38;
     private static final byte[] EOL = {0};
     private static final String BAG_SEC_TYPE = "BAG";
@@ -134,6 +136,8 @@ public class EClientSocket {
     private static final int REQ_CALC_OPTION_PRICE = 55;
     private static final int CANCEL_CALC_IMPLIED_VOLAT = 56;
     private static final int CANCEL_CALC_OPTION_PRICE = 57;
+    private static final int REQ_GLOBAL_CANCEL = 58;
+    private static final int REQ_MARKET_DATA_TYPE = 59;
     
 	private static final int MIN_SERVER_VER_REAL_TIME_BARS = 34;
 	private static final int MIN_SERVER_VER_SCALE_ORDERS = 35;
@@ -156,11 +160,20 @@ public class EClientSocket {
     private static final int MIN_SERVER_VER_REQ_CALC_OPTION_PRICE = 50;
     private static final int MIN_SERVER_VER_CANCEL_CALC_IMPLIED_VOLAT = 50;
     private static final int MIN_SERVER_VER_CANCEL_CALC_OPTION_PRICE = 50;
+    private static final int MIN_SERVER_VER_SSHORTX_OLD = 51;
+    private static final int MIN_SERVER_VER_SSHORTX = 52;
+    private static final int MIN_SERVER_VER_REQ_GLOBAL_CANCEL = 53;
+    private static final int MIN_SERVER_VER_HEDGE_ORDERS = 54;
+    private static final int MIN_SERVER_VER_REQ_MARKET_DATA_TYPE = 55;
+    private static final int MIN_SERVER_VER_OPT_OUT_SMART_ROUTING = 56;
+    private static final int MIN_SERVER_VER_SMART_COMBO_ROUTING_PARAMS = 57;
+    private static final int MIN_SERVER_VER_DELTA_NEUTRAL_CONID = 58;
 
     private AnyWrapper 			m_anyWrapper;	// msg handler
     private DataOutputStream 	m_dos;      // the socket output stream
     private boolean 			m_connected;// true if we are connected
     private EReader 			m_reader;   // thread which reads msgs from socket
+    private EWriter 			m_writer;   // thread which writes msgs from socket to pass to database
     private int 			    m_serverVersion = 0;
     private String              m_TwsTime;
 
@@ -168,13 +181,8 @@ public class EClientSocket {
     public String TwsConnectionTime()   { return m_TwsTime; }
     public AnyWrapper wrapper() 		{ return m_anyWrapper; }
     public EReader reader()             { return m_reader; }
+    public EWriter writer()            { return m_writer; }
 
-
-    /**
-     * Create an EClientSocket object.
-     * @param anyWrapper Typically an object that implements the EWrapper interface. This
-     * object will handle callbacks (including errors).
-     */
     public EClientSocket( AnyWrapper anyWrapper) {
         m_anyWrapper = anyWrapper;
     }
@@ -183,20 +191,6 @@ public class EClientSocket {
         return m_connected;
     }
     
-    /**
-     * Connect to TWS process on localhost using port 7496 and clientId 0.
-     */
-    public synchronized void eConnect() {
-    	eConnect(null, 7496, 0);
-    }
-    
-    /**
-     * Connect to the TWS process.
-     * @param host A string consisting of the IP address of the host. 
-     * 		Use null or "" to connect to the local host.
-     * @param port The port to connect to. Typically 7496.
-     * @param clientId
-     */
     public synchronized void eConnect( String host, int port, int clientId) {
         // already connected?
         host = checkConnected(host);
@@ -234,6 +228,10 @@ public class EClientSocket {
     public EReader createReader(EClientSocket socket, DataInputStream dis) {
         return new EReader(socket, dis);
     }
+    
+    public EWriter createWriter(EClientSocket socket, DataInputStream dis) {
+        return new EWriter(socket, dis);
+    }
 
     public synchronized void eConnect(Socket socket, int clientId) throws IOException {
 
@@ -246,7 +244,11 @@ public class EClientSocket {
         // start reader thread
         m_reader = createReader(this, new DataInputStream(
         		socket.getInputStream())); 
-
+        
+        // start writer thread
+        m_writer = createWriter(this, new DataInputStream(
+        		socket.getInputStream())); 
+        
         // check server version
         m_serverVersion = m_reader.readInt();
         System.out.println("Server Version:" + m_serverVersion);
@@ -975,7 +977,58 @@ public class EClientSocket {
         	}
         }
         
-        int VERSION = (m_serverVersion < MIN_SERVER_VER_NOT_HELD) ? 27 : 30;
+        if (m_serverVersion < MIN_SERVER_VER_SSHORTX) {
+        	if (order.m_exemptCode != -1) {
+        		error(id, EClientErrors.UPDATE_TWS,
+        			"  It does not support exemptCode parameter.");
+        		return;
+        	}
+        }
+        
+        if (m_serverVersion < MIN_SERVER_VER_SSHORTX) {
+        	if (!contract.m_comboLegs.isEmpty()) {
+                ComboLeg comboLeg;
+                for (int i = 0; i < contract.m_comboLegs.size(); ++i) {
+                    comboLeg = (ComboLeg)contract.m_comboLegs.get(i);
+                    if (comboLeg.m_exemptCode != -1) {
+                		error(id, EClientErrors.UPDATE_TWS,
+                			"  It does not support exemptCode parameter.");
+                		return;
+                    }
+                }
+        	}
+        }
+
+        if (m_serverVersion < MIN_SERVER_VER_HEDGE_ORDERS) {
+        	if (!IsEmpty(order.m_hedgeType)) {
+        		error(id, EClientErrors.UPDATE_TWS,
+        			"  It does not support hedge orders.");
+        		return;
+        	}
+        }
+        
+        if (m_serverVersion < MIN_SERVER_VER_OPT_OUT_SMART_ROUTING) {
+        	if (order.m_optOutSmartRouting) {
+        		error(id, EClientErrors.UPDATE_TWS,
+        			"  It does not support optOutSmartRouting parameter.");
+        		return;
+        	}
+        }
+        
+        if (m_serverVersion < MIN_SERVER_VER_DELTA_NEUTRAL_CONID) {
+        	if (order.m_deltaNeutralConId > 0 
+        			|| !IsEmpty(order.m_deltaNeutralSettlingFirm)
+        			|| !IsEmpty(order.m_deltaNeutralClearingAccount)
+        			|| !IsEmpty(order.m_deltaNeutralClearingIntent)
+        			) {
+        		error(id, EClientErrors.UPDATE_TWS,
+        			"  It does not support deltaNeutral parameters: ConId, SettlingFirm, ClearingAccount, ClearingIntent");
+        		return;
+        	}
+        }
+        
+        
+        int VERSION = (m_serverVersion < MIN_SERVER_VER_NOT_HELD) ? 27 : 35;
         
         // send place order msg
         try {
@@ -1066,6 +1119,22 @@ public class EClientSocket {
                         	send( comboLeg.m_shortSaleSlot);
                         	send( comboLeg.m_designatedLocation);
                         }
+                        if (m_serverVersion >= MIN_SERVER_VER_SSHORTX_OLD) { 
+                            send( comboLeg.m_exemptCode);
+                        }
+                    }
+                }
+            }
+
+            if(m_serverVersion >= MIN_SERVER_VER_SMART_COMBO_ROUTING_PARAMS && BAG_SEC_TYPE.equalsIgnoreCase(contract.m_secType)) {
+                java.util.Vector smartComboRoutingParams = order.m_smartComboRoutingParams;
+                int smartComboRoutingParamsCount = smartComboRoutingParams == null ? 0 : smartComboRoutingParams.size();
+                send( smartComboRoutingParamsCount);
+                if( smartComboRoutingParamsCount > 0) {
+                    for( int i = 0; i < smartComboRoutingParamsCount; ++i) {
+                        TagValue tagValue = (TagValue)smartComboRoutingParams.get(i);
+                        send( tagValue.m_tag);
+                        send( tagValue.m_value);
                     }
                 }
             }
@@ -1096,6 +1165,9 @@ public class EClientSocket {
            if (m_serverVersion >= 18) { // institutional short sale slot fields.
                send( order.m_shortSaleSlot);      // 0 only for retail, 1 or 2 only for institution.
                send( order.m_designatedLocation); // only populate when order.m_shortSaleSlot = 2.
+           }
+           if (m_serverVersion >= MIN_SERVER_VER_SSHORTX_OLD) { 
+               send( order.m_exemptCode);
            }
            if (m_serverVersion >= 19) {
                send( order.m_ocaType);
@@ -1138,6 +1210,13 @@ public class EClientSocket {
                } else {
             	   send( order.m_deltaNeutralOrderType);
             	   sendMax( order.m_deltaNeutralAuxPrice);
+                   
+                   if (m_serverVersion >= MIN_SERVER_VER_DELTA_NEUTRAL_CONID && !IsEmpty(order.m_deltaNeutralOrderType)){
+                       send( order.m_deltaNeutralConId);
+                       send( order.m_deltaNeutralSettlingFirm);
+                       send( order.m_deltaNeutralClearingAccount);
+                       send( order.m_deltaNeutralClearingIntent);
+                   }
                }
                send( order.m_continuousUpdate);
                if (m_serverVersion == 26) {
@@ -1165,6 +1244,17 @@ public class EClientSocket {
         		   
         	   }
         	   sendMax (order.m_scalePriceIncrement);
+           }
+
+           if (m_serverVersion >= MIN_SERVER_VER_HEDGE_ORDERS) {
+        	   send (order.m_hedgeType);
+        	   if (!IsEmpty(order.m_hedgeType)) {
+        		   send (order.m_hedgeParam);
+        	   }
+           }
+
+           if (m_serverVersion >= MIN_SERVER_VER_OPT_OUT_SMART_ROUTING) {
+               send (order.m_optOutSmartRouting);
            }
            
            if (m_serverVersion >= MIN_SERVER_VER_PTA_ORDERS) {
@@ -1747,6 +1837,59 @@ public class EClientSocket {
             close();
         }
     }    
+    
+    public synchronized void reqGlobalCancel() {
+        // not connected?
+        if( !m_connected) {
+            error( EClientErrors.NO_VALID_ID, EClientErrors.NOT_CONNECTED, "");
+            return;
+        }
+
+        if (m_serverVersion < MIN_SERVER_VER_REQ_GLOBAL_CANCEL) {
+            error(EClientErrors.NO_VALID_ID, EClientErrors.UPDATE_TWS,
+                    "  It does not support globalCancel requests.");
+            return;
+        }
+        
+        final int VERSION = 1;
+
+        // send request global cancel msg
+        try {
+            send( REQ_GLOBAL_CANCEL);
+            send( VERSION);
+        }
+        catch( Exception e) {
+            error( EClientErrors.NO_VALID_ID, EClientErrors.FAIL_SEND_REQGLOBALCANCEL, "" + e);
+            close();
+        }
+    }
+    
+    public synchronized void reqMarketDataType(int marketDataType) {
+        // not connected?
+        if( !m_connected) {
+            error( EClientErrors.NO_VALID_ID, EClientErrors.NOT_CONNECTED, "");
+            return;
+        }
+
+        if (m_serverVersion < MIN_SERVER_VER_REQ_MARKET_DATA_TYPE) {
+            error(EClientErrors.NO_VALID_ID, EClientErrors.UPDATE_TWS,
+                    "  It does not support marketDataType requests.");
+            return;
+        }
+        
+        final int VERSION = 1;
+
+        // send the reqMarketDataType message
+        try {
+            send( REQ_MARKET_DATA_TYPE);
+            send( VERSION);
+            send( marketDataType);
+        }
+        catch( Exception e) {
+            error( EClientErrors.NO_VALID_ID, EClientErrors.FAIL_SEND_REQMARKETDATATYPE, "" + e);
+            close();
+        }
+    }
     
     protected synchronized void error( String err) {
         m_anyWrapper.error( err);

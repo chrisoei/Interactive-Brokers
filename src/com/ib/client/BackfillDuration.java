@@ -1,7 +1,14 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package com.ib.client;
 
+/**
+ *
+ * @author BT
+ */
 public class BackfillDuration {
-
     // constants - Duration from Historical Data Limitations
     public static final int ROLLANNUAL         = 1;
     public static final int SEMIROLLANNUAL     = 2;
@@ -18,8 +25,8 @@ public class BackfillDuration {
     public static final int MIN5               = 13;
     public static final int MIN1               = 14;
     
-    public static String getField( int backfillDuration2) {
-        switch( backfillDuration2) {
+    public static String getField( int backfillDuration) {
+        switch( backfillDuration) {
             case ROLLANNUAL	: return "1 Y";
             case SEMIROLLANNUAL	: return "6 M";
             case ROLLQTR	: return "3 M";
@@ -46,5 +53,4 @@ public class BackfillDuration {
     	}
     	return fields;
     }       
-
 }

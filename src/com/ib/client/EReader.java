@@ -4,10 +4,12 @@
  */
 
 package com.ib.client;
+import com.bti3.datacollector.*;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Vector;
+
 
 public class EReader extends Thread {
 
@@ -45,6 +47,7 @@ public class EReader extends Thread {
     static final int EXECUTION_DATA_END = 55;
     static final int DELTA_NEUTRAL_VALIDATION = 56;
     static final int TICK_SNAPSHOT_END = 57;
+    static final int MARKET_DATA_TYPE = 58;
 
     private EClientSocket 	m_parent;
     private DataInputStream m_dis;
@@ -77,8 +80,9 @@ public class EReader extends Thread {
         }
     }
 
-    /** Overridden in subclass. */
-    protected boolean processMsg(int msgId) throws IOException{
+    /** Overridden in subclass. 
+     * @throws Exception */
+    protected boolean processMsg(int msgId) throws Exception{
         if( msgId == -1) return false;
         
         switch( msgId) {
@@ -412,6 +416,12 @@ public class EReader extends Thread {
                     order.m_settlingFirm = readStr();
                     order.m_shortSaleSlot = readInt();
                     order.m_designatedLocation = readStr();
+                    if ( m_parent.serverVersion() == 51){
+                        readInt(); // exemptCode
+                    }
+                    else if ( version >= 23){
+                    	order.m_exemptCode = readInt();
+                    }
                     order.m_auctionStrategy = readInt();
                     order.m_startingPrice = readDouble();
                     order.m_stockRefPrice = readDouble();
@@ -447,6 +457,13 @@ public class EReader extends Thread {
                     } else { // version 12 and up
                     	order.m_deltaNeutralOrderType = readStr();
                     	order.m_deltaNeutralAuxPrice = readDouble();
+
+                        if (version >= 27 && !Util.StringIsEmpty(order.m_deltaNeutralOrderType)) {
+                            order.m_deltaNeutralConId = readInt();
+                            order.m_deltaNeutralSettlingFirm = readStr();
+                            order.m_deltaNeutralClearingAccount = readStr();
+                            order.m_deltaNeutralClearingIntent = readStr();
+                        }
                     }
                     order.m_continuousUpdate = readInt();
                     if (m_parent.serverVersion() == 26) {
@@ -466,6 +483,19 @@ public class EReader extends Thread {
                 	contract.m_comboLegsDescrip = readStr();
                 }
                 
+                if (version >= 26) {
+                	int smartComboRoutingParamsCount = readInt();
+                	if (smartComboRoutingParamsCount > 0) {
+                		order.m_smartComboRoutingParams = new Vector(smartComboRoutingParamsCount);
+                		for (int i = 0; i < smartComboRoutingParamsCount; ++i) {
+                			TagValue tagValue = new TagValue();
+                			tagValue.m_tag = readStr();
+                			tagValue.m_value = readStr();
+                			order.m_smartComboRoutingParams.add(tagValue);
+                		}
+                	}
+                }
+
                 if (version >= 15) {
                 	if (version >= 20) {
                 		order.m_scaleInitLevelSize = readIntMax();
@@ -478,6 +508,17 @@ public class EReader extends Thread {
                 	order.m_scalePriceIncrement = readDoubleMax();
                 }
                 
+                if (version >= 24) {
+                	order.m_hedgeType = readStr();
+                	if (!Util.StringIsEmpty(order.m_hedgeType)) {
+                		order.m_hedgeParam = readStr();
+                	}
+                }
+
+                if (version >= 25) {
+                	order.m_optOutSmartRouting = readBoolFromInt();
+                }
+
                 if (version >= 19) {
                 	order.m_clearingAccount = readStr();
                 	order.m_clearingIntent = readStr();
@@ -619,6 +660,10 @@ public class EReader extends Thread {
                     contract.m_liquidHours = readStr();
                  }
                 eWrapper().contractDetails( reqId, contract);
+                
+                DataInsert dao = new DataInsert();
+    		    dao.writeContract(reqId,contract);
+                
                 break;
             }
             case BOND_CONTRACT_DATA: {
@@ -710,7 +755,9 @@ public class EReader extends Thread {
                 	exec.m_cumQty = readInt();
                 	exec.m_avgPrice = readDouble();
                 }
-
+                if (version >= 8) {
+                    exec.m_orderRef = readStr();
+                }
                 eWrapper().execDetails( reqId, contract, exec);
                 break;
             }
@@ -780,22 +827,34 @@ public class EReader extends Thread {
             	  completedIndicator += "-" + startDateStr + "-" + endDateStr;
               }
               int itemCount = readInt();
+              
+              HistoricalData historical = new HistoricalData();
+              DataInsert dao = new DataInsert();
+              
               for (int ctr = 0; ctr < itemCount; ctr++) {
-                String date = readStr();
-                double open = readDouble();
-                double high = readDouble();
-                double low = readDouble();
-                double close = readDouble();
-                int volume = readInt();
-                double WAP = readDouble();
-                String hasGaps = readStr();
-                int barCount = -1;
-                if (version >= 3) {
-                	barCount = readInt();
-                }
-                eWrapper().historicalData(reqId, date, open, high, low,
-                                        close, volume, barCount, WAP,
-                                        Boolean.valueOf(hasGaps).booleanValue());
+                  
+                  historical.m_date = readStr();
+                  historical.m_open = readDouble();
+                  historical.m_high = readDouble();
+                  historical.m_low = readDouble();
+                  historical.m_close = readDouble();
+                  historical.m_volume = readInt();
+                  historical.m_WAP = readDouble();
+                  historical.m_hasGaps = readStr();
+                  int barCount = -1;
+                  if (version >= 3) {
+                  	barCount = readInt();
+                  }
+              
+              
+                eWrapper().historicalData(reqId, historical.m_date, historical.m_open, historical.m_high, historical.m_low,
+              		  historical.m_close, historical.m_volume, barCount, historical.m_WAP,
+                                        Boolean.valueOf(historical.m_hasGaps).booleanValue());
+                
+                
+    		    dao.writeContractInfo(reqId, historical);
+                
+                
               }
               // send end of dataset marker
               eWrapper().historicalData(reqId, completedIndicator, -1, -1, -1, -1, -1, -1, -1, false);
@@ -874,6 +933,14 @@ public class EReader extends Thread {
                 int reqId = readInt();
 
                 eWrapper().tickSnapshotEnd( reqId);
+                break;
+            }
+            case MARKET_DATA_TYPE: {
+                /*int version =*/ readInt();
+                int reqId = readInt();
+                int marketDataType = readInt();
+
+                eWrapper().marketDataType( reqId, marketDataType);
                 break;
             }
             
