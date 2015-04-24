@@ -8,7 +8,7 @@ package com.ib.client;
  *
  * @author BT
  */
-public class BackfillDuration {
+public class BackfillDuration2 {
     // constants - Duration from Historical Data Limitations
     public static final int ROLLANNUAL         = 1;
     public static final int SEMIROLLANNUAL     = 2;
@@ -25,8 +25,8 @@ public class BackfillDuration {
     public static final int MIN5               = 13;
     public static final int MIN1               = 14;
     
-    public static String getField( int backfillDuration) {
-        switch( backfillDuration) {
+    public static String getField( int backfillDuration2) {
+        switch( backfillDuration2) {
             case ROLLANNUAL	: return "1 Y";
             case SEMIROLLANNUAL	: return "6 M";
             case ROLLQTR	: return "3 M";
@@ -46,10 +46,10 @@ public class BackfillDuration {
         }
     }
      public static String[] getFields(){
-    	int totalFields = BackfillDuration.class.getFields().length;
+    	int totalFields = BackfillDuration2.class.getFields().length;
     	String [] fields = new String[totalFields];
     	for (int i = 0; i < totalFields; i++){
-    		fields[i] = BackfillDuration.getField(i + 1);
+    		fields[i] = BackfillDuration2.getField(i + 1);
     	}
     	return fields;
     }       

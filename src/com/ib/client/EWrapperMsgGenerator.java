@@ -8,7 +8,7 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
     public static final String SCANNER_PARAMETERS = "SCANNER PARAMETERS:";
     public static final String FINANCIAL_ADVISOR = "FA:";
     
-	static public String tickPrice( int tickerId, int field, double price, int canAutoExecute) {
+    static public String tickPrice( int tickerId, int field, double price, int canAutoExecute) {
     	return "id=" + tickerId + "  " + TickType.getField( field) + "=" + price + " " + 
         ((canAutoExecute != 0) ? " canAutoExecute" : " noAutoExecute");
     }
@@ -86,6 +86,7 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
         " faProfile=" + order.m_faProfile +
         " shortSaleSlot=" + order.m_shortSaleSlot +
         " designatedLocation=" + order.m_designatedLocation +
+        " exemptCode=" + order.m_exemptCode +
         " ocaGroup=" + order.m_ocaGroup +
         " ocaType=" + order.m_ocaType +
         " rule80A=" + order.m_rule80A +
@@ -95,6 +96,7 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
         " eTradeOnly=" + order.m_eTradeOnly +
         " firmQuoteOnly=" + order.m_firmQuoteOnly +
         " nbboPriceCap=" + order.m_nbboPriceCap +
+        " optOutSmartRouting=" + order.m_optOutSmartRouting +
         " auctionStrategy=" + order.m_auctionStrategy +
         " startingPrice=" + order.m_startingPrice +
         " stockRefPrice=" + order.m_stockRefPrice +
@@ -105,12 +107,18 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
         " volatilityType=" + order.m_volatilityType +
         " deltaNeutralOrderType=" + order.m_deltaNeutralOrderType +
         " deltaNeutralAuxPrice=" + order.m_deltaNeutralAuxPrice +
+        " deltaNeutralConId=" + order.m_deltaNeutralConId +
+        " deltaNeutralSettlingFirm=" + order.m_deltaNeutralSettlingFirm +
+        " deltaNeutralClearingAccount=" + order.m_deltaNeutralClearingAccount +
+        " deltaNeutralClearingIntent=" + order.m_deltaNeutralClearingIntent +
         " continuousUpdate=" + order.m_continuousUpdate +
         " referencePriceType=" + order.m_referencePriceType +
         " trailStopPrice=" + order.m_trailStopPrice +
         " scaleInitLevelSize=" + Util.IntMaxString(order.m_scaleInitLevelSize) +
         " scaleSubsLevelSize=" + Util.IntMaxString(order.m_scaleSubsLevelSize) +
         " scalePriceIncrement=" + Util.DoubleMaxString(order.m_scalePriceIncrement) +
+        " hedgeType=" + order.m_hedgeType +
+        " hedgeParam=" + order.m_hedgeParam +
         " account=" + order.m_account +
         " settlingFirm=" + order.m_settlingFirm +
         " clearingAccount=" + order.m_clearingAccount +
@@ -152,6 +160,21 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
     		}
     		msg += "}";
     	}
+    	
+        if ("BAG".equals(contract.m_secType)) {
+        	msg += " smartComboRoutingParams={";
+        	if (order.m_smartComboRoutingParams != null) {
+        		Vector smartComboRoutingParams = order.m_smartComboRoutingParams;
+        		for (int i = 0; i < smartComboRoutingParams.size(); ++i) {
+        			TagValue param = (TagValue)smartComboRoutingParams.elementAt(i);
+        			if (i > 0) {
+        				msg += ",";
+        			}
+        			msg += param.m_tag + "=" + param.m_value;
+        		}
+        	}
+        	msg += "}";
+        }
     
         String orderStateMsg =
         	" status=" + orderState.m_status
@@ -225,7 +248,7 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
     	return msg;
     }
     
-	static public String contractMsg(Contract contract) {
+    static public String contractMsg(Contract contract) {
     	String msg = "conid = " + contract.m_conId + "\n"
         + "symbol = " + contract.m_symbol + "\n"
         + "secType = " + contract.m_secType + "\n"
@@ -302,6 +325,7 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
         + "liquidation = " + execution.m_liquidation + "\n"
         + "cumQty = " + execution.m_cumQty + "\n"
         + "avgPrice = " + execution.m_avgPrice + "\n"
+        + "orderRef = " + execution.m_orderRef + "\n"
         + " ---- Execution Details end ----\n";
         return msg;
     }
@@ -332,8 +356,7 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
     	return FINANCIAL_ADVISOR + " " + EClientSocket.faMsgTypeName(faDataType) + " " + xml;
     }
     
-    static public String historicalData(int reqId, String date, double open, double high, double low,
-                      					double close, int volume, int count, double WAP, boolean hasGaps) {
+    static public String historicalData(int reqId, String date, double open, double high, double low, double close, int volume, int count, double WAP, boolean hasGaps) {
     	return "id=" + reqId +
         " date = " + date +
         " open=" + open +
@@ -342,11 +365,9 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
         " close=" + close +
         " volume=" + volume +
         " count=" + count +
-        " WAP=" + WAP +
-        " hasGaps=" + hasGaps;
+        " WAP=" + WAP; 
     }
-	public static String realtimeBar(int reqId, long time, double open,
-			double high, double low, double close, long volume, double wap, int count) {
+    public static String realtimeBar(int reqId, long time, double open,	double high, double low, double close, long volume, double wap, int count) {
         return "id=" + reqId +
         " time = " + time +
         " open=" + open +
@@ -405,5 +426,9 @@ public class EWrapperMsgGenerator extends AnyWrapperMsgGenerator {
     }
     static public String tickSnapshotEnd(int tickerId) {
     	return "id=" + tickerId + " =============== end ===============";
+    }
+    
+    static public String marketDataType(int reqId, int marketDataType){
+    	return "id=" + reqId + " marketDataType = " + MarketDataType.getField(marketDataType);
     }
 }
