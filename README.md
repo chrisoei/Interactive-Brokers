@@ -25,6 +25,7 @@ and select "OK".
 ## Summary - 
 This client application will access Interactive Broker's Gateway and query various frequency data points of historical tick data 
 recording the output to a local instance of MySQL that can be analyzed using relational database techniques.
-
+![alt text][hour11]
 
 [mysql]: https://github.com/btowner01/Interactive-Brokers/blob/data-collector/sql/add_mysql_to_classpath.png?raw=true "Add MySQL connector"
+[hour11]: https://github.com/btowner01/Interactive-Brokers/blob/data-collector/hour11.png?raw=true "Hour11 Data-Collector"
