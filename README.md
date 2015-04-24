@@ -27,4 +27,4 @@ This client application will access Interactive Broker's Gateway and query vario
 recording the output to a local instance of MySQL that can be analyzed using relational database techniques.
 
 
-[mysql]: https://github.com/btowner01/Interactive-Brokers/blob/data-capture/sql/add_mysql_to_classpath.png?raw=true "Add MySQL connector"
+[mysql]: https://github.com/btowner01/Interactive-Brokers/blob/data-collector/sql/add_mysql_to_classpath.png?raw=true "Add MySQL connector"
