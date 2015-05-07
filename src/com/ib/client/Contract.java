@@ -8,49 +8,21 @@ import java.util.Vector;
 
 public class Contract implements Cloneable {
 
-	/**
-	 * Contract ID
-	 */
 	public int    m_conId;
-    /**
-     * Symbol (example: MSFT)
-     */
     public String m_symbol;
-    /**
-     * Security Type (STK for stocks)
-     */
     public String m_secType;
     public String m_expiry;
     public double m_strike;
     public String m_right;
     public String m_multiplier;
-    /**
-     * Exchange (example: SMART)
-     */
     public String m_exchange;
 
-    /**
-     * Currency (example: USD)
-     */
     public String m_currency;
     public String m_localSymbol;
-    /**
-     * Primary Exchange. Pick a non-aggregate (ie not the SMART exchange) exchange that the contract trades on.  DO NOT SET TO SMART.
-     */
-    public String m_primaryExch;
-    /**
-     * Include Expired. Can not be set to true for orders
-     */
-    public boolean m_includeExpired;
+    public String m_primaryExch;      // pick a non-aggregate (ie not the SMART exchange) exchange that the contract trades on.  DO NOT SET TO SMART.
+    public boolean m_includeExpired;  // can not be set to true for orders.
     
-    /**
-     * Security ID type: CUSIP, SEDOL, ISIN, or RIC.
-     */
-    public String m_secIdType;
-    
-    /**
-     * Security ID.
-     */
+    public String m_secIdType;        // CUSIP;SEDOL;ISIN;RIC
     public String m_secId;
     
     // COMBOS
@@ -72,23 +44,6 @@ public class Contract implements Cloneable {
         return retval;
     }
 
-    /**
-     * @param p_conId			Contract ID
-     * @param p_symbol			Symbol (example: MSFT)
-     * @param p_secType			Security Type (example: STK for stock)
-     * @param p_expiry			Expiry
-     * @param p_strike			Strike
-     * @param p_right			Put/Call
-     * @param p_multiplier		Option Multiplier
-     * @param p_exchange		Exchange (example: SMART)
-     * @param p_currency		Currency (example: USD)
-     * @param p_localSymbol		Local Symbol
-     * @param p_comboLegs		
-     * @param p_primaryExch		Primary Exchange (example: ISLAND)
-     * @param p_includeExpired	Include Expired
-     * @param p_secIdType 		Security ID Type (CUSIP;SEDOL;ISIN;RIC)
-     * @param p_secId			Security ID
-     */
     public Contract(int p_conId, String p_symbol, String p_secType, String p_expiry,
                     double p_strike, String p_right, String p_multiplier,
                     String p_exchange, String p_currency, String p_localSymbol,

@@ -64,12 +64,14 @@ public class Order {
     public int 		m_origin;             // 0=Customer, 1=Firm
     public int      m_shortSaleSlot;      // 1 if you hold the shares, 2 if they will be delivered from elsewhere.  Only for Action="SSHORT
     public String   m_designatedLocation; // set when slot=2 only.
+    public int      m_exemptCode;
 
     // SMART routing only
     public double   m_discretionaryAmt;
     public boolean  m_eTradeOnly;
     public boolean  m_firmQuoteOnly;
     public double   m_nbboPriceCap;
+    public boolean  m_optOutSmartRouting;
 
     // BOX or VOL ORDERS ONLY
     public int      m_auctionStrategy; // 1=AUCTION_MATCH, 2=AUCTION_IMPROVEMENT, 3=AUCTION_TRANSPARENT
@@ -90,6 +92,10 @@ public class Order {
     public int      m_referencePriceType; // 1=Average, 2 = BidOrAsk
     public String   m_deltaNeutralOrderType;
     public double   m_deltaNeutralAuxPrice;
+    public int      m_deltaNeutralConId;
+    public String   m_deltaNeutralSettlingFirm;
+    public String   m_deltaNeutralClearingAccount;
+    public String   m_deltaNeutralClearingIntent;
 
     // COMBO ORDERS ONLY
     public double   m_basisPoints;      // EFP orders only
@@ -100,6 +106,10 @@ public class Order {
     public int      m_scaleSubsLevelSize;
     public double   m_scalePriceIncrement;
 
+    // HEDGE ORDERS ONLY
+    public String   m_hedgeType; // 'D' - delta, 'B' - beta, 'F' - FX, 'P' - pair
+    public String   m_hedgeParam; // beta value for beta hedge, ratio for pair hedge
+
     // Clearing info
     public String 	m_account; // IB account
     public String   m_settlingFirm;
@@ -108,7 +118,7 @@ public class Order {
     
     // ALGO ORDERS ONLY
     public String m_algoStrategy;
-    public Vector m_algoParams;
+    public Vector<TagValue> m_algoParams;
 
     // What-if
     public boolean  m_whatIf;
@@ -116,15 +126,20 @@ public class Order {
     // Not Held
     public boolean  m_notHeld;
 
+    // Smart combo routing params
+    public Vector<TagValue> m_smartComboRoutingParams;
+    
     public Order() {
     	m_outsideRth = false;
         m_openClose	= "O";
         m_origin = CUSTOMER;
         m_transmit = true;
         m_designatedLocation = EMPTY_STR;
+        m_exemptCode = -1;
         m_minQty = Integer.MAX_VALUE;
         m_percentOffset = Double.MAX_VALUE;
         m_nbboPriceCap = Double.MAX_VALUE;
+        m_optOutSmartRouting = false;
         m_startingPrice = Double.MAX_VALUE;
         m_stockRefPrice = Double.MAX_VALUE;
         m_delta = Double.MAX_VALUE;
@@ -134,6 +149,10 @@ public class Order {
         m_volatilityType = Integer.MAX_VALUE;
         m_deltaNeutralOrderType = EMPTY_STR;
         m_deltaNeutralAuxPrice = Double.MAX_VALUE;
+        m_deltaNeutralConId = 0;
+        m_deltaNeutralSettlingFirm = EMPTY_STR;
+        m_deltaNeutralClearingAccount = EMPTY_STR;
+        m_deltaNeutralClearingIntent = EMPTY_STR;
         m_referencePriceType = Integer.MAX_VALUE;
         m_trailStopPrice = Double.MAX_VALUE;
         m_basisPoints = Double.MAX_VALUE;
@@ -184,6 +203,7 @@ public class Order {
         	m_eTradeOnly != l_theOther.m_eTradeOnly ||
         	m_firmQuoteOnly != l_theOther.m_firmQuoteOnly ||
         	m_nbboPriceCap != l_theOther.m_nbboPriceCap ||
+        	m_optOutSmartRouting != l_theOther.m_optOutSmartRouting ||
         	m_auctionStrategy != l_theOther.m_auctionStrategy ||
         	m_startingPrice != l_theOther.m_startingPrice ||
         	m_stockRefPrice != l_theOther.m_stockRefPrice ||
@@ -195,16 +215,18 @@ public class Order {
         	m_continuousUpdate != l_theOther.m_continuousUpdate ||
         	m_referencePriceType != l_theOther.m_referencePriceType ||
         	m_deltaNeutralAuxPrice != l_theOther.m_deltaNeutralAuxPrice ||
+        	m_deltaNeutralConId != l_theOther.m_deltaNeutralConId ||
         	m_basisPoints != l_theOther.m_basisPoints ||
         	m_basisPointsType != l_theOther.m_basisPointsType ||
         	m_scaleInitLevelSize != l_theOther.m_scaleInitLevelSize ||
         	m_scaleSubsLevelSize != l_theOther.m_scaleSubsLevelSize ||
         	m_scalePriceIncrement != l_theOther.m_scalePriceIncrement ||
         	m_whatIf != l_theOther.m_whatIf ||
-        	m_notHeld != l_theOther.m_notHeld) {
+        	m_notHeld != l_theOther.m_notHeld ||
+        	m_exemptCode != l_theOther.m_exemptCode) {
         	return false;
         }
-        
+
         if (Util.StringCompare(m_action, l_theOther.m_action) != 0 ||
         	Util.StringCompare(m_orderType, l_theOther.m_orderType) != 0 ||
         	Util.StringCompare(m_tif, l_theOther.m_tif) != 0 ||
@@ -220,6 +242,11 @@ public class Order {
         	Util.StringCompare(m_openClose, l_theOther.m_openClose) != 0 ||
         	Util.StringCompare(m_designatedLocation, l_theOther.m_designatedLocation) != 0 ||
         	Util.StringCompare(m_deltaNeutralOrderType, l_theOther.m_deltaNeutralOrderType) != 0 ||
+        	Util.StringCompare(m_deltaNeutralSettlingFirm, l_theOther.m_deltaNeutralSettlingFirm) != 0 ||
+        	Util.StringCompare(m_deltaNeutralClearingAccount, l_theOther.m_deltaNeutralClearingAccount) != 0 ||
+        	Util.StringCompare(m_deltaNeutralClearingIntent, l_theOther.m_deltaNeutralClearingIntent) != 0 ||
+        	Util.StringCompare(m_hedgeType, l_theOther.m_hedgeType) != 0 ||
+        	Util.StringCompare(m_hedgeParam, l_theOther.m_hedgeParam) != 0 ||
         	Util.StringCompare(m_account, l_theOther.m_account) != 0 ||
         	Util.StringCompare(m_settlingFirm, l_theOther.m_settlingFirm) != 0 ||
         	Util.StringCompare(m_clearingAccount, l_theOther.m_clearingAccount) != 0 ||
@@ -227,11 +254,15 @@ public class Order {
         	Util.StringCompare(m_algoStrategy, l_theOther.m_algoStrategy) != 0) {
         	return false;
         }
-        
+
         if (!Util.VectorEqualsUnordered(m_algoParams, l_theOther.m_algoParams)) {
         	return false;
         }
 
+        if (!Util.VectorEqualsUnordered(m_smartComboRoutingParams, l_theOther.m_smartComboRoutingParams)) {
+        	return false;
+        }
+        
         return true;
     }
 }
